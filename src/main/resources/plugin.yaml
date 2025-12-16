@@ -1,0 +1,24 @@
+# Refer https://docs.halo.run/developer-guide/plugin/basics/manifest
+
+apiVersion: plugin.halo.run/v1alpha1
+kind: Plugin
+metadata:
+  # The name defines how the plugin is invoked, A unique name
+  name: download-links
+spec:
+  enabled: true
+  requires: ">=2.21.0"
+  author:
+    name: lywq
+    website: https://blog.muyin.site
+  logo: logo.png
+  homepage: https://github.com/liuyiwuqing/plugin-download-links#readme
+  repo: https://github.com/liuyiwuqing/plugin-download-links
+  issues: https://github.com/liuyiwuqing/plugin-download-links/issues
+  displayName: "云盘链接下载"
+  description: "为云盘链接提供下载链接卡片。"
+  license:
+    - name: "GPL-3.0"
+      url: "https://github.com/liuyiwuqing/plugin-download-links/blob/main/LICENSE"
+  configMapName: plugin-download-links-config
+  settingName: plugin-download-links-settings

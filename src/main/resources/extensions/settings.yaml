@@ -1,0 +1,58 @@
+apiVersion: v1alpha1
+kind: Setting
+metadata:
+  name: plugin-download-links-settings
+spec:
+  forms:
+    # 下载设置
+    - group: basic
+      label: 下载设置
+      help: 下载相关设置
+      formSchema:
+        - $formkit: text
+          name: lightModeSelector
+          key: lightModeSelector
+          label: 浅色模式选择器
+          help: 浅色模式选择器，用于切换浅色模式，如：.light, [data-theme=light], html[data-mode=light]
+          value: "[data-theme=light]"
+        - $formkit: text
+          name: darkModeSelector
+          key: darkModeSelector
+          label: 深色模式选择器
+          help: 深色模式选择器，用于切换深色模式，如：.dark, [data-theme=dark], html[data-mode=dark]
+          value: ".color-scheme-dark, .dark, [data-color-scheme=dark], html[data-mode=dark]"
+        - $formkit: repeater
+          name: downloadSourceList
+          key: downloadSourceList
+          label: 下载源列表
+          help: 下载源列表，可以添加多个下载源
+          min: 1
+          value: [
+            { name: "百度云网盘", icon: "/plugins/download-links/assets/static/icon/baidu.png" },
+            { name: "阿里云网盘", icon: "/plugins/download-links/assets/static/icon/alipan.png" },
+            { name: "蓝奏云网盘", icon: "/plugins/download-links/assets/static/icon/lanzou.png" },
+            { name: "123云盘", icon: "/plugins/download-links/assets/static/icon/123pan.png" },
+            { name: "夸克网盘", icon: "/plugins/download-links/assets/static/icon/quark.png" },
+            { name: "腾讯微云", icon: "/plugins/download-links/assets/static/icon/weiyun.png" },
+            { name: "GitHub", icon: "/plugins/download-links/assets/static/icon/github.png" },
+            { name: "Gitee", icon: "/plugins/download-links/assets/static/icon/gitee.png" },
+            { name: "Onedrive", icon: "/plugins/download-links/assets/static/icon/onedrive.png" },
+            { name: "GoogleDrive", icon: "/plugins/download-links/assets/static/icon/googleDrive.png" }
+          ]
+          children:
+            - $formkit: text
+              name: name
+              key: name
+              label: 下载源名称
+              help: 下载源名称
+              value: ""
+              validation: required
+            - $formkit: attachment
+              name: icon
+              key: icon
+              label: 下载源图标
+              help: 下载源图标地址
+              accepts:
+                - "image/*"
+              value: ""
+              validation: required
