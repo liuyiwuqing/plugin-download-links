@@ -48,6 +48,10 @@ spec:
               icon: "/plugins/download-links/assets/static/icon/onedrive.png"
             - name: "GoogleDrive"
               icon: "/plugins/download-links/assets/static/icon/googleDrive.png"
+            - name: "天翼云盘"
+              icon: "/plugins/download-links/assets/static/icon/tianyiyun.png"
+            - name: "移动云盘"
+              icon: "/plugins/download-links/assets/static/icon/yidongyun.png"
           itemLabels:
             - type: image
               label: $value.icon
