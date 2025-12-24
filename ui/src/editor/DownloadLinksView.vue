@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import {nodeViewProps, NodeViewWrapper} from "@halo-dev/richtext-editor";
-import {computed, onMounted, reactive, ref} from "vue";
+import {computed, onMounted, ref, watch} from "vue";
 import {consoleApiClient} from "@halo-dev/api-client";
 import MdiAddBold from '~icons/mdi/add-bold';
 import MdiRemoveBold from '~icons/mdi/remove-bold';
@@ -26,54 +26,63 @@ type PresetItem = {
   icon: string;
 };
 
-// 预设列表（从后端配置获取）
 const presets = ref<PresetItem[]>([]);
 
-// 加载预设列表
 async function loadPresets() {
   try {
-    console.log("加载下载来源配置...");
-    const config = await consoleApiClient.plugin.plugin.fetchPluginJsonConfig({ name: "download-links" });
+    const config = await consoleApiClient.plugin.plugin.fetchPluginJsonConfig({name: "download-links"});
     const configData = config.data as any;
     const downloadSourceList: DownloadSource[] = configData?.basic?.downloadSourceList || [];
 
-    console.log("configData:", config);
-    console.log("configData:", configData);
-    console.log("downloadSourceList:", downloadSourceList);
-    // 转换为预设格式
-    const presetList: PresetItem[] = downloadSourceList.map((source) => ({
+    presets.value = downloadSourceList.map((source) => ({
       label: source.name,
       value: source.name,
       icon: source.icon
     }));
-    
-    presets.value = presetList;
   } catch (error) {
     console.error("加载下载来源配置失败:", error);
-    // 失败时使用默认预设
     presets.value = [
-      { label: "百度云网盘", value: "百度云网盘", icon: "" }
+      {label: "百度云网盘", value: "百度云网盘", icon: ""}
     ];
   }
 }
 
-const local = reactive<{ links: LinkItem[] }>({
-  links: (props.node?.attrs?.links as LinkItem[]) || [],
-});
+const links = ref<LinkItem[]>([]);
+
+function initLinks() {
+  const nodeLinks = props.node?.attrs?.links;
+  if (Array.isArray(nodeLinks)) {
+    links.value = JSON.parse(JSON.stringify(nodeLinks));
+  } else {
+    links.value = [];
+  }
+}
+
+watch(
+    () => props.node?.attrs?.links,
+    (newLinks) => {
+      if (newLinks !== undefined) {
+        links.value = JSON.parse(JSON.stringify(newLinks || []));
+      }
+    },
+    {deep: true}
+);
+
+initLinks();
 
 function sync() {
-  props.updateAttributes?.({ links: local.links });
+  props.updateAttributes?.({links: JSON.parse(JSON.stringify(links.value))});
 }
 
 function addItem() {
   const defaultSource = presets.value.length > 0 ? presets.value[0].value : "";
   const defaultIcon = presets.value.length > 0 ? presets.value[0].icon : "";
-  local.links.push({ url: "", filename: "", source: defaultSource, code: "", icon: defaultIcon });
+  links.value.push({url: "", filename: "", source: defaultSource, code: "", icon: defaultIcon});
   sync();
 }
 
 function removeItem(index: number) {
-  local.links.splice(index, 1);
+  links.value.splice(index, 1);
   sync();
 }
 
@@ -89,9 +98,8 @@ function getCurrentPreset(item: LinkItem) {
   return presets.value.find(p => p.value === item.source) || null;
 }
 
-const hasItems = computed(() => local.links.length > 0);
+const hasItems = computed(() => links.value.length > 0);
 
-// 组件挂载时加载预设
 onMounted(() => {
   loadPresets();
 });
@@ -102,21 +110,21 @@ onMounted(() => {
     <div class="downloadLinks-header">
       <span>下载地址</span>
       <button class="downloadLinks-addBtn" @click="addItem" type="button">
-        <MdiAddBold />
+        <MdiAddBold/>
         新增
       </button>
     </div>
     <div v-if="!hasItems" class="downloadLinks-empty">
       暂无下载项，点击上方按钮新增
     </div>
-    <div v-for="(item, i) in local.links" :key="i" class="downloadLinks-item">
+    <div v-for="(item, i) in links" :key="i" class="downloadLinks-item">
       <div class="downloadLinks-itemContent">
         <div class="downloadLinks-sourceWrapper">
-          <img 
-            v-if="getCurrentPreset(item)?.icon" 
-            :src="getCurrentPreset(item)?.icon" 
-            :alt="item.source"
-            class="downloadLinks-icon"
+          <img
+              v-if="getCurrentPreset(item)?.icon"
+              :src="getCurrentPreset(item)?.icon"
+              :alt="item.source"
+              class="downloadLinks-icon"
           />
           <div class="downloadLinks-iconPlaceholder" v-else></div>
           <select v-model="item.source" @change="onPresetChange(item)" class="downloadLinks-sourceSelect">
@@ -124,19 +132,31 @@ onMounted(() => {
           </select>
         </div>
         <div class="downloadLinks-field">
-          <label>文件名</label>
-          <input v-model="item.filename" placeholder="例如：example.zip" @blur="sync" />
+          <label>文件名 <span class="required">*</span></label>
+          <input
+              v-model="item.filename"
+              placeholder="例如：example.zip"
+              @input="sync"
+              required
+              :class="{ 'input-error': !item.filename?.trim() }"
+          />
         </div>
         <div class="downloadLinks-field downloadLinks-field-url">
-          <label>下载地址</label>
-          <input v-model="item.url" placeholder="https://..." @blur="sync" />
+          <label>下载地址 <span class="required">*</span></label>
+          <input
+              v-model="item.url"
+              placeholder="https://..."
+              @input="sync"
+              required
+              :class="{ 'input-error': !item.url?.trim() }"
+          />
         </div>
         <div class="downloadLinks-field downloadLinks-field-code">
           <label>提取码</label>
-          <input v-model="item.code" placeholder="可选" @blur="sync" />
+          <input v-model="item.code" placeholder="可选" @input="sync"/>
         </div>
         <button class="downloadLinks-deleteBtn" @click="removeItem(i)" type="button" title="删除">
-          <MdiRemoveBold />
+          <MdiRemoveBold/>
         </button>
       </div>
     </div>
@@ -342,6 +362,20 @@ onMounted(() => {
 
 .downloadLinks-field input::placeholder {
   color: #9ca3af;
+}
+
+.downloadLinks-field .required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.downloadLinks-field input.input-error {
+  border-color: #ef4444;
+}
+
+.downloadLinks-field input.input-error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
 }
 </style>
 

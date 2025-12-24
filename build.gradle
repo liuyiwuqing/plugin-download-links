@@ -43,7 +43,7 @@ tasks.named('classes') {
 
 halo {
     externalUrl = 'https://plugin.orb.local'
-    version = '2.21.7'
+    version = '2.22.0'
     debug = true
 //    suspend = true
     port = 8686

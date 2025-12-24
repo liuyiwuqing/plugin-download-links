@@ -1,4 +1,4 @@
-import {definePlugin} from '@halo-dev/console-shared'
+import {definePlugin} from '@halo-dev/ui-shared'
 import {DownloadLinksExtension} from "@/editor";
 
 export default definePlugin({
