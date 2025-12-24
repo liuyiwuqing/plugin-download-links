@@ -42,51 +42,63 @@ public class DownloadLinksRenderer {
         }
         boolean needsStyle = !html.contains(STYLE_ID) && !html.contains(STYLE_MARKER);
 
-        Mono<String> styleBlockMono = needsStyle ? getStyleBlock() : Mono.just("");
+        return settingFetcher.fetch(DownloadSetting.GROUP, DownloadSetting.class)
+                .defaultIfEmpty(new DownloadSetting())
+                .map(downloadSetting -> {
+                    Map<String, String> sourceIconMap = buildSourceIconMap(downloadSetting);
+                    String styleBlock = needsStyle ? buildStyleBlock(downloadSetting) : "";
 
-        return styleBlockMono.map(styleBlock -> {
-            final boolean[] styleInjected = {false};
-            String result = replaceAll(html, TAG_PATTERN, matcher -> {
-                String attrs = matcher.group(1);
-                String data = extractGroup(attrs, DATA_LINKS_PATTERN, 1);
-                if (data == null) {
-                    return "";
-                }
-                data = unescapeHtml(data);
-                List<Map<String, Object>> links;
-                try {
-                    links = objectMapper.readValue(data, new TypeReference<>() {
+                    final boolean[] styleInjected = {false};
+                    String result = replaceAll(html, TAG_PATTERN, matcher -> {
+                        String attrs = matcher.group(1);
+                        String data = extractGroup(attrs, DATA_LINKS_PATTERN, 1);
+                        if (data == null) {
+                            return "";
+                        }
+                        data = unescapeHtml(data);
+                        List<Map<String, Object>> links;
+                        try {
+                            links = objectMapper.readValue(data, new TypeReference<>() {
+                            });
+                        } catch (Exception e) {
+                            links = Collections.emptyList();
+                        }
+                        String htmlContent = buildHtml(links, sourceIconMap);
+                        if (needsStyle && !styleInjected[0] && !links.isEmpty()) {
+                            styleInjected[0] = true;
+                            return styleBlock + "\n" + htmlContent;
+                        }
+                        return htmlContent;
                     });
-                } catch (Exception e) {
-                    links = Collections.emptyList();
-                }
-                String htmlContent = buildHtml(links);
-                if (needsStyle && !styleInjected[0] && !links.isEmpty()) {
-                    styleInjected[0] = true;
-                    return styleBlock + "\n" + htmlContent;
-                }
-                return htmlContent;
-            });
-            if (needsStyle && !styleInjected[0]) {
-                if (result.contains("</head>")) {
-                    result = result.replace("</head>", styleBlock + "\n</head>");
-                } else {
-                    result = styleBlock + "\n" + result;
-                }
-            }
-            return result;
-        });
+                    if (needsStyle && !styleInjected[0]) {
+                        if (result.contains("</head>")) {
+                            result = result.replace("</head>", styleBlock + "\n</head>");
+                        } else {
+                            result = styleBlock + "\n" + result;
+                        }
+                    }
+                    return result;
+                });
     }
 
-    private Mono<String> getStyleBlock() {
-        return settingFetcher.fetch(DownloadSetting.GROUP, DownloadSetting.class)
-                .map(this::buildStyleBlock)
-                .defaultIfEmpty("");
+    private Map<String, String> buildSourceIconMap(DownloadSetting downloadSetting) {
+        List<DownloadSetting.DownloadSource> sourceList = downloadSetting.getDownloadSourceList();
+        if (sourceList == null || sourceList.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, String> map = new java.util.HashMap<>();
+        for (DownloadSetting.DownloadSource source : sourceList) {
+            if (isNotBlank(source.getName()) && isNotBlank(source.getIcon())) {
+                map.put(source.getName(), source.getIcon());
+            }
+        }
+        return map;
     }
 
     private String buildStyleBlock(DownloadSetting downloadSetting) {
         String lightModeSelector = downloadSetting.getLightModeSelector();
         String darkModeSelector = downloadSetting.getDarkModeSelector();
+        List<DownloadSetting.DownloadSource> downloadSourceList = downloadSetting.getDownloadSourceList();
 
         return """
                     <style id="%s">%s
@@ -158,7 +170,7 @@ public class DownloadLinksRenderer {
                 """.formatted(STYLE_ID, STYLE_MARKER, lightModeSelector, darkModeSelector);
     }
 
-    private String buildHtml(List<Map<String, Object>> links) {
+    private String buildHtml(List<Map<String, Object>> links, Map<String, String> sourceIconMap) {
         if (links.isEmpty()) {
             return "";
         }
@@ -168,7 +180,9 @@ public class DownloadLinksRenderer {
         StringBuilder iconCssRules = new StringBuilder();
         int index = 0;
         for (Map<String, Object> link : links) {
-            String icon = str(link.get("icon"));
+            String source = str(link.get("source"));
+            // 根据 source 从配置中获取 icon
+            String icon = sourceIconMap.getOrDefault(source, "");
             String iconClass = "tools-download-links__icon--" + index;
             items.append(buildLinkItem(link, iconClass));
 
