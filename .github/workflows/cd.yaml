@@ -8,6 +8,9 @@ on:
 jobs:
   cd:
     uses: halo-sigs/reusable-workflows/.github/workflows/plugin-cd.yaml@v3
+    secrets:
+      # 发布到Halo应用商店所需的个人访问令牌
+      halo-pat: ${{ secrets.HALO_PAT }}
     permissions:
       contents: write
     with:
